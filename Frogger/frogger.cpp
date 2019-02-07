@@ -6,12 +6,11 @@ and may not be redistributed without written permission.*/
 #include <stdio.h>
 #include <string>
 #include <array>
+#include <time.h>
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 432;
 const int SCREEN_HEIGHT = 512;
-const int MAP_WIDTH = 10;
-const int MAP_HEIGHT = 13;
 
 /*
  * Enums
@@ -44,14 +43,22 @@ SDL_Surface* gCurrentSurface = NULL; // Current displayed image
 SDL_Surface* lilypadSurface[9]; // Lilypad images
 SDL_Surface* wonSurface = NULL; // Congratulations screen
 SDL_Surface* loseSurface = NULL; // Gameover screen
+SDL_Surface* carSurface[5]; // Car screen
 SDL_Rect froggerRect; // Frogger rect
 SDL_Rect lilypadRect[9]; // Lilypad rects
+SDL_Rect carRect[5]; // Car rect
 std::array< std::array<int, 10>, 13> froggerMap;
 int froggerColumn = 5;
 int froggerRow = 12;
 
+int carColumn[5] = {9, 2, 5, 3, 8};
+int carRow[5] = {7, 8, 9, 10, 11};
 
 int main(int argc, char* args[]) {
+    
+    // Initialize car timer
+    clock_t carTimer = clock();
+    
     // Initialize froggerMap
     froggerMap = {
         2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -69,6 +76,23 @@ int main(int argc, char* args[]) {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
     
+    // Initialize car on froggerMap
+    for (int i = 0; i < 5; i++) {
+        froggerMap[carRow[i]][carColumn[i]] = 1;
+    }
+    
+    // Initialize carRect(s)
+    for (int i = 0; i < 5; i++) {
+        carRect[i].h = 1;
+        carRect[i].w = 1;
+    }
+    
+    // carRect(s)
+    for (int i = 0; i < 5; i++) {
+        carRect[i].x = (SCREEN_WIDTH / 10) * carColumn[i];
+        carRect[i].y = (SCREEN_HEIGHT / 13) * carRow[i] + 5;
+    }
+
     // Initialize froggerRect
     froggerRect.x = (SCREEN_WIDTH / 10) * froggerColumn;
     froggerRect.y = (SCREEN_HEIGHT / 13) * froggerRow + 5;
@@ -135,6 +159,24 @@ int main(int argc, char* args[]) {
             
             // Event loop
             while (!quit){
+                // Create car movement
+                if (((clock() - carTimer) / CLOCKS_PER_SEC) >= 0.125) {
+                    for (int i = 0; i < 5; i++) {
+                        froggerMap[carRow[i]][carColumn[i]] = 0;
+                        if (carColumn[i] > -1) {
+                            carColumn[i]--;
+                            froggerMap[carRow[i]][carColumn[i]] = 1;
+                            carRect[i].x -= 39;
+                        }
+                        else {
+                            carColumn[i] = 9;
+                            froggerMap[carRow[i]][carColumn[i]] = 1;
+                            carRect[i].x = (SCREEN_WIDTH / 10) * carColumn[i];
+                        }
+                    }
+                    carTimer = clock();
+                }
+                
                 // Handle events on queue
                 while (SDL_PollEvent(&e)){
                     // User requests quit
@@ -181,16 +223,16 @@ int main(int argc, char* args[]) {
                         }
                         printf("XPos: %d,\tYPos: %d\n", froggerColumn, froggerRow);
                     }
-                    // Check collision
-                    if (froggerMap[froggerRow][froggerColumn] == 1) {
-                        lose = true;
-                        quit = true;
-                    }
-                    else if (froggerMap[froggerRow][froggerColumn] == 2) {
-                        won = true;
-                        quit = true;
-                    }
-                    
+                }
+                
+                // Check collision
+                if (froggerMap[froggerRow][froggerColumn] == 1) {
+                    lose = true;
+                    quit = true;
+                }
+                else if (froggerMap[froggerRow][froggerColumn] == 2) {
+                    won = true;
+                    quit = true;
                 }
                 
                 if (lose) {
@@ -212,6 +254,9 @@ int main(int argc, char* args[]) {
                     SDL_BlitSurface(backgroundSurface, NULL, gScreenSurface, NULL);
                     for (int i = 0; i < 9; i++) {
                         SDL_BlitSurface(lilypadSurface[i], NULL, gScreenSurface, &lilypadRect[i]);
+                    }
+                    for (int i = 0; i < 5; i++) {
+                        SDL_BlitSurface(carSurface[i], NULL, gScreenSurface, &carRect[i]);
                     }
                     SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, &froggerRect);
                     
@@ -278,6 +323,15 @@ bool loadMedia() {
     if (wonSurface == NULL) {
         printf("Failed to load win surface!\n");
         success = false;
+    }
+    
+    // Load car surface
+    for (int i = 0; i < 5; i++) {
+        carSurface[i] = loadSurface("Images/frogger_car.bmp");
+        if (carSurface[i] == NULL) {
+            printf("Failed to load car surface!\n");
+            success = false;
+        }
     }
     
     // Load gameover surface
