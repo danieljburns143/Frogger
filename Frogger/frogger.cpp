@@ -5,10 +5,13 @@ and may not be redistributed without written permission.*/
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <string>
+#include <array>
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 432;
 const int SCREEN_HEIGHT = 512;
+const int MAP_WIDTH = 10;
+const int MAP_HEIGHT = 13;
 
 /*
  * Enums
@@ -38,8 +41,72 @@ SDL_Surface* gScreenSurface = NULL; // The surface contained by the window
 SDL_Surface* backgroundSurface = NULL; // The surface that will hold the background
 SDL_Surface* gKeyPressSurfaces[KEY_PRESS_SURFACE_TOTAL]; // The images that correspond to a keypress
 SDL_Surface* gCurrentSurface = NULL; // Current displayed image
+SDL_Surface* lilypadSurface[9]; // Lilypad images
+SDL_Surface* wonSurface = NULL; // Congratulations screen
+SDL_Surface* loseSurface = NULL; // Gameover screen
+SDL_Rect froggerRect; // Frogger rect
+SDL_Rect lilypadRect[9]; // Lilypad rects
+std::array< std::array<int, 10>, 13> froggerMap;
+int froggerColumn = 5;
+int froggerRow = 12;
+
 
 int main(int argc, char* args[]) {
+    // Initialize froggerMap
+    froggerMap = {
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        1, 1, 1, 1, 1, 1, 0, 1, 1, 1,
+        1, 1, 1, 0, 0, 0, 0, 1, 1, 1,
+        1, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 0, 0, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    };
+    
+    // Initialize froggerRect
+    froggerRect.x = (SCREEN_WIDTH / 10) * froggerColumn;
+    froggerRect.y = (SCREEN_HEIGHT / 13) * froggerRow + 5;
+    froggerRect.h = 1;
+    froggerRect.w = 1;
+    
+    // Initialize lilypadRect(s)
+    for (int i = 0; i < 9; i++) {
+        lilypadRect[i].h = 1;
+        lilypadRect[i].w = 1;
+    }
+    // Lilypad 0
+    lilypadRect[0].x = (SCREEN_WIDTH / 10) * 4 + 4;
+    lilypadRect[0].y = (SCREEN_HEIGHT / 13) * 5 + 5;
+    // Lilypad 1
+    lilypadRect[1].x = (SCREEN_WIDTH / 10) * 4 + 4;
+    lilypadRect[1].y = (SCREEN_HEIGHT / 13) * 4 + 5;
+    // Lilypad 2
+    lilypadRect[2].x = (SCREEN_WIDTH / 10) * 3 + 8;
+    lilypadRect[2].y = (SCREEN_HEIGHT / 13) * 4 + 5;
+    // Lilypad 3
+    lilypadRect[3].x = (SCREEN_WIDTH / 10) * 3 + 8;
+    lilypadRect[3].y = (SCREEN_HEIGHT / 13) * 3 + 5;
+    // Lilypad 4
+    lilypadRect[4].x = (SCREEN_WIDTH / 10) * 3 + 8;
+    lilypadRect[4].y = (SCREEN_HEIGHT / 13) * 2 + 5;
+    // Lilypad 5
+    lilypadRect[5].x = (SCREEN_WIDTH / 10) * 4 + 4;
+    lilypadRect[5].y = (SCREEN_HEIGHT / 13) * 2 + 5;
+    // Lilypad 6
+    lilypadRect[6].x = (SCREEN_WIDTH / 10) * 5;
+    lilypadRect[6].y = (SCREEN_HEIGHT / 13) * 2 + 5;
+    // Lilypad 7
+    lilypadRect[7].x = (SCREEN_WIDTH / 10) * 6 - 4;
+    lilypadRect[7].y = (SCREEN_HEIGHT / 13) * 2 + 5;
+    // Lilypad 8
+    lilypadRect[8].x = (SCREEN_WIDTH / 10) * 6 - 4;
+    lilypadRect[8].y = (SCREEN_HEIGHT / 13) * 1 + 5;
     
     // Start up SDL and create window
     if (!init()) {
@@ -53,6 +120,12 @@ int main(int argc, char* args[]) {
         else {
             // Main loop flag
             bool quit = false;
+            
+            // Won flag
+            bool won = false;
+            
+            // Lose flag
+            bool lose = false;
             
             // Event handler
             SDL_Event e;
@@ -73,16 +146,32 @@ int main(int argc, char* args[]) {
                         // Select surface based on key press
                         switch (e.key.keysym.sym) {
                             case SDLK_UP:
-                                gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_UP];
+                                if (froggerRow > 0) {
+                                    gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_UP];
+                                    froggerRect.y -= 39;
+                                    froggerRow--;
+                                }
                                 break;
                             case SDLK_DOWN:
-                                gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_DOWN];
+                                if (froggerRow < 12) {
+                                    gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_DOWN];
+                                    froggerRect.y += 39;
+                                    froggerRow++;
+                                }
                                 break;
                             case SDLK_LEFT:
-                                gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_LEFT];
+                                if (froggerColumn > 0) {
+                                    gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_LEFT];
+                                    froggerRect.x -= 39;
+                                    froggerColumn--;
+                                }
                                 break;
                             case SDLK_RIGHT:
-                                gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT];
+                                if (froggerColumn < 9) {
+                                    gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT];
+                                    froggerRect.x += 39;
+                                    froggerColumn++;
+                                }
                                 break;
                             case SDLK_q:
                                 quit = true;
@@ -90,15 +179,58 @@ int main(int argc, char* args[]) {
                             default:
                                 break;
                         }
+                        printf("XPos: %d,\tYPos: %d\n", froggerColumn, froggerRow);
                     }
+                    // Check collision
+                    if (froggerMap[froggerRow][froggerColumn] == 1) {
+                        lose = true;
+                        quit = true;
+                    }
+                    else if (froggerMap[froggerRow][froggerColumn] == 2) {
+                        won = true;
+                        quit = true;
+                    }
+                    
                 }
                 
-                // Apply the images
-                SDL_BlitSurface(backgroundSurface, NULL, gScreenSurface, NULL);
-                SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, NULL);
+                if (lose) {
+                    // Clear screen
+                    SDL_FillRect(gScreenSurface, NULL, SDL_MapRGB(gScreenSurface->format, 0, 0, 0));
+                    
+                    // Gameover screen
+                    SDL_BlitSurface(loseSurface, NULL, gScreenSurface, NULL);
+                    
+                    // Update the surface
+                    SDL_UpdateWindowSurface(gWindow);
+                    
+                    // Delay 2 seconds
+                    SDL_Delay(2000);
+                }
                 
-                // Update the surface
-                SDL_UpdateWindowSurface(gWindow);
+                if (!won) {
+                    // Apply the images
+                    SDL_BlitSurface(backgroundSurface, NULL, gScreenSurface, NULL);
+                    for (int i = 0; i < 9; i++) {
+                        SDL_BlitSurface(lilypadSurface[i], NULL, gScreenSurface, &lilypadRect[i]);
+                    }
+                    SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, &froggerRect);
+                    
+                    // Update the surface
+                    SDL_UpdateWindowSurface(gWindow);
+                }
+                else {
+                    // Clear screen
+                    SDL_FillRect(gScreenSurface, NULL, SDL_MapRGB(gScreenSurface->format, 0, 0, 0));
+                    
+                    // Congrats screen
+                    SDL_BlitSurface(wonSurface, NULL, gScreenSurface, NULL);
+                    
+                    // Update the surface
+                    SDL_UpdateWindowSurface(gWindow);
+                    
+                    // Delay 2 seconds
+                    SDL_Delay(2000);
+                }
             }
         }
     }
@@ -141,8 +273,35 @@ bool loadMedia() {
     // Loading success flag
     bool success = true;
     
+    // Load won surface
+    wonSurface = loadSurface("Images/frogger_win.bmp");
+    if (wonSurface == NULL) {
+        printf("Failed to load win surface!\n");
+        success = false;
+    }
+    
+    // Load gameover surface
+    loseSurface = loadSurface("Images/frogger_gameover.bmp");
+    if (loseSurface == NULL) {
+        printf("Failed to load lose surface!\n");
+        success = false;
+    }
+    
     // Load background surface
     backgroundSurface = loadSurface("Images/frogger_background.bmp");
+    if (backgroundSurface == NULL) {
+        printf("Failed to load background surface!\n");
+        success = false;
+    }
+    
+    // Load lilypad surfaces
+    for (int i = 0; i < 9; i++) {
+        lilypadSurface[i] = loadSurface("Images/frogger_lilypad.bmp");
+        if (lilypadSurface[i] == NULL) {
+            printf("Failed to load lilypad #%d!\n", i);
+            success = false;
+        }
+    }
     
     // Load default surface
     gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT] = loadSurface("Images/frogger_looking_up.bmp");
@@ -205,6 +364,7 @@ SDL_Surface* loadSurface(std::string path) {
     
     // Load image at specified path
     SDL_Surface* loadedSurface = SDL_LoadBMP(path.c_str());
+    
     if (loadedSurface == NULL) {
         printf("Unable to load image %s: SDL_Error: %s\n", path.c_str(), SDL_GetError());
     }
