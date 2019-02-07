@@ -7,8 +7,8 @@ and may not be redistributed without written permission.*/
 #include <string>
 
 // Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 432;
+const int SCREEN_HEIGHT = 512;
 
 /*
  * Enums
@@ -35,6 +35,7 @@ SDL_Surface* loadSurface(std::string path); // Loads individual image
  */
 SDL_Window* gWindow = NULL; // The window we'll be rendering to
 SDL_Surface* gScreenSurface = NULL; // The surface contained by the window
+SDL_Surface* backgroundSurface = NULL; // The surface that will hold the background
 SDL_Surface* gKeyPressSurfaces[KEY_PRESS_SURFACE_TOTAL]; // The images that correspond to a keypress
 SDL_Surface* gCurrentSurface = NULL; // Current displayed image
 
@@ -83,14 +84,17 @@ int main(int argc, char* args[]) {
                             case SDLK_RIGHT:
                                 gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT];
                                 break;
+                            case SDLK_q:
+                                quit = true;
+                                break;
                             default:
-                                gCurrentSurface = gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT];
                                 break;
                         }
                     }
                 }
                 
-                // Apply the image
+                // Apply the images
+                SDL_BlitSurface(backgroundSurface, NULL, gScreenSurface, NULL);
                 SDL_BlitSurface(gCurrentSurface, NULL, gScreenSurface, NULL);
                 
                 // Update the surface
@@ -137,36 +141,39 @@ bool loadMedia() {
     // Loading success flag
     bool success = true;
     
+    // Load background surface
+    backgroundSurface = loadSurface("Images/frogger_background.bmp");
+    
     // Load default surface
-    gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT] = loadSurface("04_key_presses/press.bmp");
+    gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT] = loadSurface("Images/frogger_looking_up.bmp");
     if (gKeyPressSurfaces[KEY_PRESS_SURFACE_DEFAULT] == NULL) {
         printf("Failed to load default image!\n");
         success = false;
     }
     
     // Load up surface
-    gKeyPressSurfaces[KEY_PRESS_SURFACE_UP] = loadSurface("04_key_presses/up.bmp");
+    gKeyPressSurfaces[KEY_PRESS_SURFACE_UP] = loadSurface("Images/frogger_looking_up.bmp");
     if (gKeyPressSurfaces[KEY_PRESS_SURFACE_UP] == NULL) {
         printf("Failed to load up image!\n");
         success = false;
     }
     
     // Load down surface
-    gKeyPressSurfaces[KEY_PRESS_SURFACE_DOWN] = loadSurface("04_key_presses/down.bmp");
+    gKeyPressSurfaces[KEY_PRESS_SURFACE_DOWN] = loadSurface("Images/frogger_looking_down.bmp");
     if (gKeyPressSurfaces[KEY_PRESS_SURFACE_DOWN] == NULL) {
         printf("Failed to load down image!\n");
         success = false;
     }
     
     // Load left surface
-    gKeyPressSurfaces[KEY_PRESS_SURFACE_LEFT] = loadSurface("04_key_presses/left.bmp");
+    gKeyPressSurfaces[KEY_PRESS_SURFACE_LEFT] = loadSurface("Images/frogger_looking_left.bmp");
     if (gKeyPressSurfaces[KEY_PRESS_SURFACE_LEFT] == NULL) {
         printf("Failed to load left image!\n");
         success = false;
     }
     
     // Load right surface
-    gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT] = loadSurface("04_key_presses/right.bmp");
+    gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT] = loadSurface("Images/frogger_looking_right.bmp");
     if (gKeyPressSurfaces[KEY_PRESS_SURFACE_RIGHT] == NULL) {
         printf("Failed to load right image!\n");
         success = false;
